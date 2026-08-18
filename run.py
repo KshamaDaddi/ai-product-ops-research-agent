@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 
 from dotenv import load_dotenv
 
-from app.agents.research_agent import ResearchAgent
+from app.agents.pipeline import ResearchPipeline
 from app.tools.web_search import search_web
 
 
@@ -25,8 +24,13 @@ def main() -> None:
         "official MCP server Model Context Protocol",
     ]
     evidence = search_web(args.app, queries)
-    result = ResearchAgent(evidence=evidence).run(args.app, args.category)
-    print(json.dumps(result.model_dump(mode="json"), indent=2, ensure_ascii=False))
+    result, qc = ResearchPipeline(evidence=evidence).run(args.app, args.category)
+
+    output = {
+        "research_result": result.model_dump(mode="json"),
+        "quality_control": qc.model_dump(mode="json"),
+    }
+    print(json.dumps(output, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":
