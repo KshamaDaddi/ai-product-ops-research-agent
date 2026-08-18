@@ -27,7 +27,7 @@ def main() -> None:
     result, qc = ResearchPipeline(evidence=evidence).run(args.app, args.category)
 
     output = {
-        "research_result": result.model_dump(mode="json"),
+        "research_result": result,
         "quality_control": qc.model_dump(mode="json"),
     }
     print(json.dumps(output, indent=2, ensure_ascii=False))
