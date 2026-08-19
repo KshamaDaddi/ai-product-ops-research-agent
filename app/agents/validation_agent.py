@@ -1,19 +1,17 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
-from openai import OpenAI
+from app.llm.claude_provider import ClaudeProvider
 from app.schemas.qc_schema import QCReport, QCFinding
 
 
 class ValidationAgent:
-    """Independent QC pass with deterministic hard gates plus LLM review."""
+    """Independent deterministic + Claude QC pass."""
 
     def __init__(self):
-        self.client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-        self.model = os.getenv("OPENAI_MODEL", "gpt-5.6")
+        self.client = ClaudeProvider()
         prompt_path = Path(__file__).parents[1] / "prompts" / "validation_prompt.txt"
         self.system_prompt = prompt_path.read_text(encoding="utf-8")
 
@@ -37,11 +35,11 @@ class ValidationAgent:
         creds = result.get("credential_access", {})
         build = result.get("buildability", {})
         mcp = result.get("mcp", {})
+        mcp_urls = {str(e.get("url")) for e in mcp.get("evidence", [])}
         if api.get("availability") == "public" and not api.get("evidence"):
             findings.append(QCFinding(severity="error", field="api", issue="Public API classification has no API evidence.", recommendation="Attach API documentation or change the classification."))
         if creds.get("classification") == "self_serve" and not creds.get("evidence"):
             findings.append(QCFinding(severity="error", field="credential_access", issue="Self-serve credential classification has no credential evidence.", recommendation="Provide credential-registration evidence or use unknown/gated."))
-        mcp_urls = {str(e.get("url")) for e in mcp.get("evidence", [])}
         if mcp.get("status") == "official" and not any(c.get("official") for u, c in by_url.items() if u in mcp_urls):
             findings.append(QCFinding(severity="error", field="mcp", issue="Official MCP classification lacks validated first-party evidence.", recommendation="Use first-party MCP evidence or classify as community/unknown."))
         if build.get("verdict") == "ready" and (api.get("availability") != "public" or creds.get("classification") != "self_serve"):
@@ -51,12 +49,7 @@ class ValidationAgent:
     def validate(self, research_result: dict, source_checks: list[dict]) -> QCReport:
         hard_findings = self._hard_gates(research_result, source_checks)
         payload = {"research_result": research_result, "source_checks": source_checks, "deterministic_findings": [f.model_dump() for f in hard_findings]}
-        response = self.client.responses.parse(
-            model=self.model,
-            input=[{"role": "system", "content": self.system_prompt}, {"role": "user", "content": json.dumps(payload, ensure_ascii=False, indent=2)}],
-            text_format=QCReport,
-        )
-        qc = response.output_parsed
+        qc = self.client.parse(self.system_prompt, json.dumps(payload, ensure_ascii=False, indent=2), QCReport)
         if hard_findings:
             qc.findings = hard_findings + qc.findings
             qc.passed = False
