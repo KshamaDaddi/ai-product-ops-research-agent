@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 
 class GeminiProvider:
-    """Gemini adapter using JSON output with a Developer-API-safe schema."""
+    """Gemini adapter using Chat.send_message for structured JSON output."""
 
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY")
@@ -27,9 +27,7 @@ class GeminiProvider:
             if isinstance(node, dict):
                 out = {}
                 for key, value in node.items():
-                    if key == "additionalProperties":
-                        continue
-                    if key == "$schema":
+                    if key in {"additionalProperties", "$schema"}:
                         continue
                     out[key] = clean(value)
                 return out
@@ -40,15 +38,16 @@ class GeminiProvider:
         return clean(raw)
 
     def parse(self, system_prompt: str, user_prompt: str, schema: type[BaseModel]) -> BaseModel:
-        response = self.client.models.generate_content(
+        chat = self.client.chats.create(
             model=self.model,
-            contents=f"{system_prompt}\n\n{user_prompt}",
             config=types.GenerateContentConfig(
                 temperature=0,
+                system_instruction=system_prompt,
                 response_mime_type="application/json",
                 response_schema=self._sanitize_schema(schema),
             ),
         )
+        response = chat.send_message(user_prompt)
         if not response.text:
             raise RuntimeError("Gemini returned an empty response.")
         return schema.model_validate_json(response.text)
