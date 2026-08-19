@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from typing import Literal
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
 Confidence = Literal["high", "medium", "low", "unknown"]
 
 
 class Evidence(BaseModel):
     claim: str
-    url: HttpUrl
+    # Keep URL as a plain string because OpenAI Structured Outputs does not
+    # accept JSON Schema's uri/format constraint in this response schema.
+    url: str
     source_type: str
     excerpt: str | None = None
 
