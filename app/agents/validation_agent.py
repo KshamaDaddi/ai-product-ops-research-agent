@@ -19,9 +19,8 @@ class ValidationAgent:
     def _hard_gates(result: dict, checks: list[dict]) -> list[QCFinding]:
         findings: list[QCFinding] = []
         by_url = {c["url"]: c for c in checks}
-        sections = ("authentication", "credential_access", "api", "mcp")
         evidence = []
-        for section in sections:
+        for section in ("authentication", "credential_access", "api", "mcp"):
             evidence.extend(result.get(section, {}).get("evidence", []))
         evidence.extend(result.get("evidence_summary", []))
         if not evidence:
