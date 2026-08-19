@@ -1,0 +1,9 @@
+{
+  "app": "Notion",
+  "category": "Productivity",
+  "quality_control": {
+    "passed": true,
+    "score": 92
+  },
+  "summary": "Successful end-to-end research and QC run. The result classified Notion as buildable with public API access, self-serve credentials, and official MCP evidence."
+}
