@@ -3,15 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.llm.claude_provider import ClaudeProvider
+from app.llm.gemini_provider import GeminiProvider
 from app.schemas.qc_schema import QCReport, QCFinding
 
 
 class ValidationAgent:
-    """Independent deterministic + Claude QC pass."""
+    """Independent deterministic + Gemini QC pass."""
 
     def __init__(self):
-        self.client = ClaudeProvider()
+        self.client = GeminiProvider()
         prompt_path = Path(__file__).parents[1] / "prompts" / "validation_prompt.txt"
         self.system_prompt = prompt_path.read_text(encoding="utf-8")
 
